@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dispensa</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body { font-family: sans-serif; padding: 16px; }
+    input, button { padding: 10px; margin: 5px 0; width: 100%; }
+    .box { border:1px solid #ccc; padding:12px; margin:12px 0; border-radius:8px; }
+  </style>
+</head>
+
+<body>
+  <h1>Dispensa</h1>
+
+  <div class="box">
+    <h3>Scansiona Codice</h3>
+    <div id="reader" style="width: 260px;"></div>
+    <p id="scan-result"></p>
+    <button onclick="startScanner()">Avvia Scanner</button>
+    <button onclick="stopScanner()">Stop Scanner</button>
+  </div>
+
+  <div class="box">
+    <h3>Dati Prodotto</h3>
+
+    <input id="barcode" placeholder="Codice (scansionato)" readonly>
+    <input id="description" placeholder="Descrizione prodotto">
+    <input id="location" placeholder="Posizione (es: Dispensa, Frigo)">
+    <input id="quantity" placeholder="Quantità" type="number">
+    <input id="expiry" placeholder="Data scadenza" type="date">
+
+    <button onclick="saveProduct()">Salva</button>
+    <button onclick="loadProduct()">Cerca</button>
+    <button onclick="updateProduct()">Aggiorna</button>
+  </div>
+
+  <script type="module" src="app.js"></script>
+
+  <script>
+    let qr;
+
+    async function startScanner() {
+      qr = new Html5Qrcode("reader");
+      await qr.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 200 },
+        code => {
+          document.getElementById('barcode').value = code;
+          document.getElementById('scan-result').innerText = "Scansionato: " + code;
+          stopScanner();
+        }
+      );
+    }
+
+    function stopScanner() {
+      if (qr) qr.stop();
+    }
+  </script>
+
+</body>
+</html>
