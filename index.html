@@ -27,16 +27,15 @@
 
     <!-- Header -->
 
+
 <header class="mb-6">
   <div class="flex items-center gap-2">
-    <img src="icon.png" alt="Dispensa"
-         class="w-[10px] h-[10px] inline-block rounded-sm select-none pointer-events-none" />
+    <img src="icon.png" alt="Dispensa" class="w-[30px] h-[30px] rounded-sm" />
     <h1 class="text-2xl sm:text-3xl font-bold text-green-700 leading-none">Dispensa</h1>
-    <span id="app-version"
-          class="ml-auto text-xs text-gray-500 tracking-tight"
-          aria-label="Versione software">v…</span>
+    <span id="app-version" class="ml-auto text-xs text-gray-500" aria-label="Versione software"></span>
   </div>
 </header>
+
 
 
     <!-- Scanner -->
@@ -143,45 +142,55 @@
       }
     }
   </script>
-  <script>
-  async function getSWVersion() {
+ <script>
+  async function setHeaderVersionFromSW() {
+    // Se il browser non supporta i SW, esci
     if (!('serviceWorker' in navigator)) return;
 
-    // Attende che il SW sia pronto
-    const reg = await navigator.serviceWorker.ready.catch(() => null);
-    if (!reg) return;
+    try {
+      // Attendi che il SW sia pronto/attivo
+      const reg = await navigator.serviceWorker.ready;
 
-    // Trova un client attivo (la tab corrente)
-    const [client] = await self.clients?.matchAll?.({ type: 'window', includeUncontrolled: true })
-                     .catch(() => []) || [];
-    // Crea un canale di risposta
-    const chan = new MessageChannel();
+      // Prepara un canale per ricevere la risposta
+      const channel = new MessageChannel();
+      const versionPromise = new Promise((resolve) => {
+        channel.port1.onmessage = (e) => resolve(e?.data?.version || null);
+        // fallback nel caso non arrivasse risposta
+        setTimeout(() => resolve(null), 2500);
+      });
 
-    const versionPromise = new Promise((resolve) => {
-      chan.port1.onmessage = (e) => resolve(e?.data?.version || null);
-      // Fallback timeout
-      setTimeout(() => resolve(null), 3000);
-    });
+      // Invia la richiesta al SW “controllore” (quello attivo sulla pagina)
+      const target = navigator.serviceWorker.controller || reg.active;
+      if (target) {
+        target.postMessage({ type: 'GET_VERSION' }, [channel.port2]);
+      }
 
-    // Invia la richiesta al SW (worker ‘controller’, se presente)
-    if (navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({ type: 'GET_VERSION' }, [chan.port2]);
-    } else if (reg.active) {
-      reg.active.postMessage({ type: 'GET_VERSION' }, [chan.port2]);
-    }
-
-    const version = await versionPromise;
-    if (version) {
+      // Aggiorna lo span se ricevi la versione
+      const v = await versionPromise;
       const el = document.getElementById('app-version');
-      if (el) el.textContent = `v${version}`;
+      if (el && v) {
+        el.textContent = `v${v}`;
+      } else if (el) {
+        // opzionale: se nessuna versione è disponibile
+        el.textContent = '';
+      }
+    } catch (err) {
+      // In caso di errori, lascia vuoto lo span
+      console.warn('Version fetch failed', err);
     }
   }
 
-  // Prova a leggerla all’avvio e anche quando cambia il controller (update SW)
+  // Leggi la versione quando la pagina è caricata
+  window.addEventListener('load', () => {
+    // Piccolo delay per dare tempo al SW di attivarsi
+    setTimeout(setHeaderVersionFromSW, 200);
+  });
+
+  // Se il SW cambia (dopo un aggiornamento), rileggi la versione
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.addEventListener('controllerchange', () => getSWVersion());
-    // Aspetta un attimo che il SW si attivi
-    window.addEventListener('load', () => setTimeout(getSWVersion, 300));
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      setTimeout(setHeaderVersionFromSW, 200);
+    });
   }
 </script>
 </body>

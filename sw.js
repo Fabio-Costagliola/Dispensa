@@ -1,7 +1,7 @@
 // sw.js — Dispensa PWA
 // Caching statici + runtime, prompt aggiornamento (skipWaiting), versioning.
 
-const VERSION = "1.3.5";
+const VERSION = "1.3.6";
 const CACHE_NAME = `dispensa-${VERSION}`;
 const ASSETS = [
   "index.html",
@@ -29,12 +29,19 @@ self.addEventListener("activate", (event) => {
 });
 
 // Messaggi dal client (es. SKIP_WAITING)
+
 self.addEventListener("message", (event) => {
   const { type } = event.data || {};
-  if (type === "SKIP_WAITING") {
+  if (type === "GET_VERSION") {
+    // Risponde al client che ha aperto il canale
+    if (event.ports && event.ports[0]) {
+      event.ports[0].postMessage({ version: VERSION });
+    }
+  } else if (type === "SKIP_WAITING") {
     self.skipWaiting();
   }
 });
+
 
 // Strategia fetch:
 // - Navigazioni (document): network-first con fallback a cache per offline
