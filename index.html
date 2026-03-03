@@ -114,34 +114,66 @@
   <script type="module" src="app.js"></script>
 
   <!-- Script scanner locale (manteniamo qui per semplicità) -->
-  <script>
-    let qr;
-    async function startScanner() {
-      try {
-        // Dimensione coerente con il box
-        const config = { fps: 10, qrbox: 200 };
-        qr = new Html5Qrcode("reader");
-        await qr.start(
-          { facingMode: "environment" },
-          config,
-          (decodedText) => {
-            document.getElementById("barcode").value = decodedText;
-            document.getElementById("scan-result").innerText =
-              "Scansionato: " + decodedText;
-            stopScanner();
-          }
-        );
-      } catch (e) {
-        console.error(e);
-        alert("Impossibile avviare la fotocamera. Controlla i permessi.");
-      }
+<script>
+  let qr;
+
+  async function startScanner() {
+    try {
+      // ⚠️ Importante: specifica i formati BARCODE da supportare
+      const formats = [
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E
+      ];
+
+      const html5Config = {
+        fps: 12,                 // un po' più alto aiuta la lettura continua
+        qrbox: 220,              // area di scansione adeguata su iPhone
+        aspectRatio: 1.0,        // box quadrato stabile
+        disableFlip: true,       // evita flip che confonde il barcode
+        formatsToSupport: formats,
+        rememberLastUsedCamera: true
+      };
+
+      // Inizializza (se già creato, riusa)
+      if (!qr) qr = new Html5Qrcode("reader");
+
+      await qr.start(
+        { facingMode: "environment" },
+        html5Config,
+        onScanSuccess,
+        onScanFailure // opzionale, log/telemetria
+      );
+    } catch (e) {
+      console.error(e);
+      alert("Impossibile avviare lo scanner. Verifica permessi/HTTPS.");
     }
-    function stopScanner() {
-      if (qr) {
-        qr.stop().catch(() => {}).finally(() => (qr = null));
-      }
+  }
+
+  function onScanSuccess(decodedText) {
+    // Decodifica trovata → compila e ferma
+    document.getElementById("barcode").value = decodedText;
+    document.getElementById("scan-result").innerText = "Scansionato: " + decodedText;
+    stopScanner();
+  }
+
+  function onScanFailure(err) {
+    // Silenzioso: capita spesso mentre cerca (nessun alert).
+    // console.debug("No match", err);
+  }
+
+  function stopScanner() {
+    if (qr) {
+      // Stop sicuro: rilascia la camera
+      qr.stop()
+        .then(() => qr.clear())
+        .catch(() => {})
+        .finally(() => { qr = null; });
     }
-  </script>
+  }
+</script>
  <script>
   async function setHeaderVersionFromSW() {
     // Se il browser non supporta i SW, esci
