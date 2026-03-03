@@ -1,65 +1,99 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dispensa</title>
-  <link rel="manifest" href="manifest.webmanifest">
-  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Manifest -->
+  <link rel="manifest" href="manifest.webmanifest" />
+
+  <!-- iOS status bar color -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
   <style>
-    body { font-family: sans-serif; padding: 16px; }
-    input, button { padding: 10px; margin: 5px 0; width: 100%; }
-    .box { border:1px solid #ccc; padding:12px; margin:12px 0; border-radius:8px; }
+    /* Smooth transitions */
+    * {
+      transition: 0.15s ease-in-out;
+    }
   </style>
 </head>
 
-<body>
-  <h1>Dispensa</h1>
+<body class="bg-gray-100 min-h-screen p-4 text-gray-800">
 
-  <div class="box">
-    <h3>Scansiona Codice</h3>
-    <div id="reader" style="width: 260px;"></div>
-    <p id="scan-result"></p>
-    <button onclick="startScanner()">Avvia Scanner</button>
-    <button onclick="stopScanner()">Stop Scanner</button>
-  </div>
+  <header class="text-center mb-6">
+    <h1 class="text-3xl font-bold text-green-700">Dispensa</h1>
+    <p class="text-sm text-gray-500">Gestisci facilmente la tua pantry</p>
+  </header>
 
-  <div class="box">
-    <h3>Dati Prodotto</h3>
+  <!-- Scanner Box -->
+  <section class="bg-white shadow-md rounded-xl p-4 mb-6">
+    <h2 class="text-lg font-semibold mb-3">Scansiona un prodotto</h2>
 
-    <input id="barcode" placeholder="Codice (scansionato)" readonly>
-    <input id="description" placeholder="Descrizione prodotto">
-    <input id="location" placeholder="Posizione (es: Dispensa, Frigo)">
-    <input id="quantity" placeholder="Quantità" type="number">
-    <input id="expiry" placeholder="Data scadenza" type="date">
+    <div id="reader" class="mx-auto rounded-lg overflow-hidden border border-gray-300" style="width:260px;"></div>
 
-    <button onclick="saveProduct()">Salva</button>
-    <button onclick="loadProduct()">Cerca</button>
-    <button onclick="updateProduct()">Aggiorna</button>
-  </div>
+    <p id="scan-result" class="mt-2 text-green-700 font-medium text-center"></p>
 
+    <div class="mt-2 grid grid-cols-2 gap-2">
+      <button onclick="startScanner()" class="bg-green-600 text-white py-2 rounded-lg shadow hover:bg-green-700">
+        Avvia
+      </button>
+      <button onclick="stopScanner()" class="bg-gray-300 py-2 rounded-lg shadow hover:bg-gray-400">
+        Stop
+      </button>
+    </div>
+  </section>
+
+  <!-- Product Form -->
+  <section class="bg-white shadow-md rounded-xl p-4">
+    <h2 class="text-lg font-semibold mb-3">Dettagli prodotto</h2>
+
+    <input id="barcode" readonly class="w-full mb-2 p-3 border border-gray-300 rounded-lg bg-gray-100" placeholder="Codice scansionato" />
+
+    <input id="description" class="w-full mb-2 p-3 border border-gray-300 rounded-lg" placeholder="Descrizione prodotto" />
+
+    <input id="location" class="w-full mb-2 p-3 border border-gray-300 rounded-lg" placeholder="Posizione (es. Frigo, Dispensa)" />
+
+    <input id="quantity" type="number" class="w-full mb-2 p-3 border border-gray-300 rounded-lg" placeholder="Quantità" />
+
+    <input id="expiry" type="date" class="w-full mb-4 p-3 border border-gray-300 rounded-lg" />
+
+    <div class="grid grid-cols-3 gap-2">
+      <button onclick="saveProduct()" class="bg-green-600 text-white py-2 rounded-lg shadow hover:bg-green-700">
+        Salva
+      </button>
+      <button onclick="loadProduct()" class="bg-blue-600 text-white py-2 rounded-lg shadow hover:bg-blue-700">
+        Cerca
+      </button>
+      <button onclick="updateProduct()" class="bg-yellow-500 text-white py-2 rounded-lg shadow hover:bg-yellow-600">
+        Modifica
+      </button>
+    </div>
+  </section>
+
+  <script src="https://unpkg.com/html5-qrcode"></script>
   <script type="module" src="app.js"></script>
 
   <script>
     let qr;
-
     async function startScanner() {
       qr = new Html5Qrcode("reader");
       await qr.start(
         { facingMode: "environment" },
         { fps: 10, qrbox: 200 },
         code => {
-          document.getElementById('barcode').value = code;
-          document.getElementById('scan-result').innerText = "Scansionato: " + code;
+          document.getElementById("barcode").value = code;
+          document.getElementById("scan-result").innerText = "Scansionato: " + code;
           stopScanner();
         }
       );
     }
-
     function stopScanner() {
       if (qr) qr.stop();
     }
   </script>
-
 </body>
 </html>
