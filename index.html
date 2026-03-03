@@ -26,11 +26,18 @@
   <div class="w-full max-w-[420px]">
 
     <!-- Header -->
-    <header class="text-center mb-6">
-    <!--  <img src="icon.png" alt="Dispensa" class="mx-auto w-16 h-16 mb-2 rounded-xl" />-->
-      <h1 class="text-3xl font-bold text-green-700">Dispensa</h1>
-    <!--  <p class="text-sm text-gray-500">Gestisci la tua pantry</p>-->
-    </header>
+
+<header class="mb-6">
+  <div class="flex items-center gap-2">
+    <img src="icon.png" alt="Dispensa"
+         class="w-[10px] h-[10px] inline-block rounded-sm select-none pointer-events-none" />
+    <h1 class="text-2xl sm:text-3xl font-bold text-green-700 leading-none">Dispensa</h1>
+    <span id="app-version"
+          class="ml-auto text-xs text-gray-500 tracking-tight"
+          aria-label="Versione software">v…</span>
+  </div>
+</header>
+
 
     <!-- Scanner -->
     <section class="bg-white shadow-md rounded-xl p-4 mb-6">
@@ -38,7 +45,7 @@
 
       <!-- Contenitore scanner con dimensioni fisse per non “sbordare” -->
       <div id="reader"
-           class="mx-auto rounded-lg overflow-hidden border border-gray-300 w-[240px] h-[120px]">
+           class="mx-auto rounded-lg overflow-hidden border border-gray-300 w-[240px] h-[240px]">
       </div>
 
       <p id="scan-result"
@@ -136,5 +143,46 @@
       }
     }
   </script>
+  <script>
+  async function getSWVersion() {
+    if (!('serviceWorker' in navigator)) return;
+
+    // Attende che il SW sia pronto
+    const reg = await navigator.serviceWorker.ready.catch(() => null);
+    if (!reg) return;
+
+    // Trova un client attivo (la tab corrente)
+    const [client] = await self.clients?.matchAll?.({ type: 'window', includeUncontrolled: true })
+                     .catch(() => []) || [];
+    // Crea un canale di risposta
+    const chan = new MessageChannel();
+
+    const versionPromise = new Promise((resolve) => {
+      chan.port1.onmessage = (e) => resolve(e?.data?.version || null);
+      // Fallback timeout
+      setTimeout(() => resolve(null), 3000);
+    });
+
+    // Invia la richiesta al SW (worker ‘controller’, se presente)
+    if (navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'GET_VERSION' }, [chan.port2]);
+    } else if (reg.active) {
+      reg.active.postMessage({ type: 'GET_VERSION' }, [chan.port2]);
+    }
+
+    const version = await versionPromise;
+    if (version) {
+      const el = document.getElementById('app-version');
+      if (el) el.textContent = `v${version}`;
+    }
+  }
+
+  // Prova a leggerla all’avvio e anche quando cambia il controller (update SW)
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => getSWVersion());
+    // Aspetta un attimo che il SW si attivi
+    window.addEventListener('load', () => setTimeout(getSWVersion, 300));
+  }
+</script>
 </body>
 </html>
