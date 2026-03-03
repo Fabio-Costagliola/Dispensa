@@ -39,28 +39,42 @@
 
 
     <!-- Scanner -->
-    <section class="bg-white shadow-md rounded-xl p-4 mb-6">
-      <h2 class="text-lg font-semibold mb-3">Scansiona un prodotto</h2>
+<!-- Scanner: modalità fotocamera nativa a tutto schermo -->
+<section class="bg-white shadow-md rounded-xl p-4 mb-6">
+  <h2 class="text-lg font-semibold mb-3">Scansiona un prodotto</h2>
 
-      <!-- Contenitore scanner con dimensioni fisse per non “sbordare” -->
-      <div id="reader"
-           class="mx-auto rounded-lg overflow-hidden border border-gray-300 w-[240px] h-[240px]">
-      </div>
+  <!-- Il riquadro rimane solo come placeholder/overlay (non streaming) -->
+  <div id="reader"
+       class="mx-auto rounded-lg overflow-hidden border border-gray-300 w-[240px] h-[80px] flex items-center justify-center text-gray-400 text-sm">
+    Fotocamera a schermo intero (foto)
+  </div>
 
-      <p id="scan-result"
-         class="mt-2 text-green-700 font-medium text-center"></p>
+  <p id="scan-result" class="mt-2 text-green-700 font-medium text-center"></p>
 
-      <div class="mt-2 grid grid-cols-2 gap-2">
-        <button onclick="startScanner()"
-                class="bg-green-600 text-white py-2 rounded-lg shadow hover:bg-green-700">
-          Avvia
-        </button>
-        <button onclick="stopScanner()"
-                class="bg-gray-300 py-2 rounded-lg shadow hover:bg-gray-400">
-          Stop
-        </button>
-      </div>
-    </section>
+  <!-- Input "nascosto" che apre la fotocamera nativa -->
+  <input id="capture"
+         type="file"
+         accept="image/*"
+         capture="environment"
+         class="hidden" />
+
+  <div class="mt-3 grid grid-cols-1 gap-2">
+    <!-- Questo bottone apre la fotocamera a schermo intero -->
+    <label for="capture"
+           class="cursor-pointer text-center bg-green-600 text-white py-2 rounded-lg shadow hover:bg-green-700">
+      Scatta e leggi
+    </label>
+  </div>
+
+  <!-- (Opzionale) link per tornare alla modalità “telecamera live” -->
+  <!--
+  <div class="mt-2 text-center">
+    <button onclick="startScannerLive()" class="text-xs text-blue-600 underline">
+      Usa modalità telecamera (stream)
+    </button>
+  </div>
+  -->
+</section>
 
     <!-- Form Prodotto -->
     <section class="bg-white shadow-md rounded-xl p-4">
@@ -115,11 +129,109 @@
 
   <!-- Script scanner locale (manteniamo qui per semplicità) -->
 <script>
-  let qr;
+  // === Modalità "foto a schermo intero" ===
+  // 1) Usa BarcodeDetector (se disponibile in Safari/iOS recenti)
+  // 2) Fallback su html5-qrcode.scanFileV2
 
-  async function startScanner() {
+  const fileInput = document.getElementById('capture');
+  const resultEl  = document.getElementById('scan-result');
+
+  // Formati da cercare (BarcodeDetector)
+  const BARCODE_FORMATS = ['ean_13', 'ean_8', 'code_128', 'upc_a', 'upc_e'];
+
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
     try {
-      // ⚠️ Importante: specifica i formati BARCODE da supportare
+      // 1) Prova con BarcodeDetector (se supportato)
+      const code = await tryBarcodeDetector(file);
+      if (code) {
+        handleDecodedText(code);
+        return;
+      }
+
+      // 2) Fallback: html5-qrcode (scanFileV2)
+      const code2 = await tryHtml5QrcodeScan(file);
+      if (code2) {
+        handleDecodedText(code2);
+        return;
+      }
+
+      // Nessun match
+      resultEl.textContent = 'Nessun codice rilevato. Riprova avvicinando e curando la luce.';
+      resultEl.classList.remove('text-green-700');
+      resultEl.classList.add('text-red-600');
+    } catch (err) {
+      console.error(err);
+      resultEl.textContent = 'Errore durante la lettura. Riprova.';
+      resultEl.classList.remove('text-green-700');
+      resultEl.classList.add('text-red-600');
+    } finally {
+      // Permette nuovi scatti consecutivi
+      fileInput.value = '';
+    }
+  });
+
+  async function tryBarcodeDetector(file) {
+    if (!('BarcodeDetector' in window)) return null;
+
+    try {
+      const detector = new BarcodeDetector({ formats: BARCODE_FORMATS });
+      const bitmap = await createImageBitmap(file);
+      const codes = await detector.detect(bitmap);
+      if (codes && codes.length) {
+        // Prendi il migliore (il più lungo o il primo)
+        const best = codes.sort((a, b) => (b.rawValue?.length || 0) - (a.rawValue?.length || 0))[0];
+        return best.rawValue || null;
+      }
+      return null;
+    } catch (e) {
+      // Alcuni device dichiarano l’API ma falliscono → passa al fallback
+      return null;
+    }
+  }
+
+  async function tryHtml5QrcodeScan(file) {
+    if (typeof Html5Qrcode === 'undefined') return null;
+    const formats = [
+      // Questi nomi sono quelli di html5-qrcode
+      Html5QrcodeSupportedFormats.EAN_13,
+      Html5QrcodeSupportedFormats.EAN_8,
+      Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.UPC_A,
+      Html5QrcodeSupportedFormats.UPC_E
+    ];
+    // Istanzia con l’ID del container (non visualizza stream in questa modalità)
+    const html5 = new Html5Qrcode('reader', { formatsToSupport: formats });
+
+    try {
+      // scanFileV2 restituisce un oggetto con .decodedText (o array, a seconda versione)
+      const res = await html5.scanFileV2(file, /* showImage */ false);
+      // Alcune versioni ritornano { decodedText, result }
+      if (res?.decodedText) return res.decodedText;
+
+      // In altre, res può essere un array (prendi il migliore/il primo)
+      if (Array.isArray(res) && res.length) {
+        return res[0]?.decodedText || null;
+      }
+      return null;
+    } finally {
+      try { await html5.clear(); } catch(_) {}
+    }
+  }
+
+  function handleDecodedText(decodedText) {
+    document.getElementById('barcode').value = decodedText;
+    resultEl.textContent = 'Scansionato: ' + decodedText;
+    resultEl.classList.remove('text-red-600');
+    resultEl.classList.add('text-green-700');
+  }
+
+  // === (Opzionale) Modalità live di prima ===
+  // Se vuoi tenere anche il vecchio streaming, puoi ripristinarlo qui:
+  async function startScannerLive() {
+    try {
       const formats = [
         Html5QrcodeSupportedFormats.EAN_13,
         Html5QrcodeSupportedFormats.EAN_8,
@@ -127,50 +239,18 @@
         Html5QrcodeSupportedFormats.UPC_A,
         Html5QrcodeSupportedFormats.UPC_E
       ];
-
-      const html5Config = {
-        fps: 12,                 // un po' più alto aiuta la lettura continua
-        qrbox: 220,              // area di scansione adeguata su iPhone
-        aspectRatio: 1.0,        // box quadrato stabile
-        disableFlip: true,       // evita flip che confonde il barcode
-        formatsToSupport: formats,
-        rememberLastUsedCamera: true
-      };
-
-      // Inizializza (se già creato, riusa)
-      if (!qr) qr = new Html5Qrcode("reader");
-
-      await qr.start(
-        { facingMode: "environment" },
-        html5Config,
-        onScanSuccess,
-        onScanFailure // opzionale, log/telemetria
-      );
+      const config = { fps: 12, qrbox: 220, aspectRatio: 1.0, disableFlip: true, formatsToSupport: formats };
+      if (!window.__qrLive) window.__qrLive = new Html5Qrcode('reader');
+      await window.__qrLive.start({ facingMode: 'environment' }, config, (text) => handleDecodedText(text));
     } catch (e) {
       console.error(e);
-      alert("Impossibile avviare lo scanner. Verifica permessi/HTTPS.");
+      alert('Impossibile avviare lo streaming. Resta quella a foto.');
     }
   }
-
-  function onScanSuccess(decodedText) {
-    // Decodifica trovata → compila e ferma
-    document.getElementById("barcode").value = decodedText;
-    document.getElementById("scan-result").innerText = "Scansionato: " + decodedText;
-    stopScanner();
-  }
-
-  function onScanFailure(err) {
-    // Silenzioso: capita spesso mentre cerca (nessun alert).
-    // console.debug("No match", err);
-  }
-
-  function stopScanner() {
-    if (qr) {
-      // Stop sicuro: rilascia la camera
-      qr.stop()
-        .then(() => qr.clear())
-        .catch(() => {})
-        .finally(() => { qr = null; });
+  async function stopScannerLive() {
+    if (window.__qrLive) {
+      try { await window.__qrLive.stop(); await window.__qrLive.clear(); } catch(_) {}
+      window.__qrLive = null;
     }
   }
 </script>
