@@ -22,78 +22,81 @@
   </style>
 </head>
 
-<body class="bg-gray-100 min-h-screen p-4 text-gray-800">
+<body class="bg-gray-100 min-h-screen flex justify-center px-4 pt-6">
 
-  <header class="text-center mb-6">
-    <h1 class="text-3xl font-bold text-green-700">Dispensa</h1>
-    <p class="text-sm text-gray-500">Gestisci facilmente la tua pantry</p>
-  </header>
+  <!-- WRAPPER RESPONSIVE (max 420px simile alle app iPhone) -->
+  <div class="w-full max-w-[420px]">
 
-  <!-- Scanner Box -->
-  <section class="bg-white shadow-md rounded-xl p-4 mb-6">
-    <h2 class="text-lg font-semibold mb-3">Scansiona un prodotto</h2>
+    <header class="text-center mb-6">
+      <h1 class="text-3xl font-bold text-green-700">Dispensa</h1>
+      <p class="text-sm text-gray-500">Gestisci la tua pantry</p>
+    </header>
 
-    <div id="reader" class="mx-auto rounded-lg overflow-hidden border border-gray-300" style="width:260px;"></div>
+    <!-- Scanner Box -->
+    <section class="bg-white shadow-md rounded-xl p-4 mb-6">
+      <h2 class="text-lg font-semibold mb-3">Scansiona un prodotto</h2>
 
-    <p id="scan-result" class="mt-2 text-green-700 font-medium text-center"></p>
+      <div 
+        id="reader" 
+        class="mx-auto rounded-lg overflow-hidden border border-gray-300 w-[240px] h-[240px]">
+      </div>
 
-    <div class="mt-2 grid grid-cols-2 gap-2">
-      <button onclick="startScanner()" class="bg-green-600 text-white py-2 rounded-lg shadow hover:bg-green-700">
-        Avvia
-      </button>
-      <button onclick="stopScanner()" class="bg-gray-300 py-2 rounded-lg shadow hover:bg-gray-400">
-        Stop
-      </button>
-    </div>
-  </section>
+      <p id="scan-result" class="mt-2 text-green-700 font-medium text-center"></p>
 
-  <!-- Product Form -->
-  <section class="bg-white shadow-md rounded-xl p-4">
-    <h2 class="text-lg font-semibold mb-3">Dettagli prodotto</h2>
+      <div class="mt-2 grid grid-cols-2 gap-2">
+        <button onclick="startScanner()" class="bg-green-600 text-white py-2 rounded-lg shadow hover:bg-green-700">
+          Avvia
+        </button>
+        <button onclick="stopScanner()" class="bg-gray-300 py-2 rounded-lg shadow hover:bg-gray-400">
+          Stop
+        </button>
+      </div>
+    </section>
 
-    <input id="barcode" readonly class="w-full mb-2 p-3 border border-gray-300 rounded-lg bg-gray-100" placeholder="Codice scansionato" />
+    <!-- Product Form -->
+    <section class="bg-white shadow-md rounded-xl p-4">
+      <h2 class="text-lg font-semibold mb-3">Dettagli prodotto</h2>
 
-    <input id="description" class="w-full mb-2 p-3 border border-gray-300 rounded-lg" placeholder="Descrizione prodotto" />
+      <!-- Input più stretti: padding minore e limite larghezza -->
+      <div class="space-y-3">
 
-    <input id="location" class="w-full mb-2 p-3 border border-gray-300 rounded-lg" placeholder="Posizione (es. Frigo, Dispensa)" />
+        <input id="barcode"
+          class="w-full max-w-[360px] mx-auto block p-2.5 border border-gray-300 rounded-lg bg-gray-100"
+          placeholder="Codice scansionato" readonly />
 
-    <input id="quantity" type="number" class="w-full mb-2 p-3 border border-gray-300 rounded-lg" placeholder="Quantità" />
+        <input id="description"
+          class="w-full max-w-[360px] mx-auto block p-2.5 border border-gray-300 rounded-lg"
+          placeholder="Descrizione prodotto" />
 
-    <input id="expiry" type="date" class="w-full mb-4 p-3 border border-gray-300 rounded-lg" />
+        <input id="location"
+          class="w-full max-w-[360px] mx-auto block p-2.5 border border-gray-300 rounded-lg"
+          placeholder="Posizione (es. Frigo, Dispensa)" />
 
-    <div class="grid grid-cols-3 gap-2">
-      <button onclick="saveProduct()" class="bg-green-600 text-white py-2 rounded-lg shadow hover:bg-green-700">
-        Salva
-      </button>
-      <button onclick="loadProduct()" class="bg-blue-600 text-white py-2 rounded-lg shadow hover:bg-blue-700">
-        Cerca
-      </button>
-      <button onclick="updateProduct()" class="bg-yellow-500 text-white py-2 rounded-lg shadow hover:bg-yellow-600">
-        Modifica
-      </button>
-    </div>
-  </section>
+        <input id="quantity" type="number"
+          class="w-full max-w-[360px] mx-auto block p-2.5 border border-gray-300 rounded-lg"
+          placeholder="Quantità" />
 
-  <script src="https://unpkg.com/html5-qrcode"></script>
-  <script type="module" src="app.js"></script>
+        <input id="expiry" type="date"
+          class="w-full max-w-[360px] mx-auto block p-2.5 border border-gray-300 rounded-lg" />
+      </div>
 
-  <script>
-    let qr;
-    async function startScanner() {
-      qr = new Html5Qrcode("reader");
-      await qr.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 200 },
-        code => {
-          document.getElementById("barcode").value = code;
-          document.getElementById("scan-result").innerText = "Scansionato: " + code;
-          stopScanner();
-        }
-      );
-    }
-    function stopScanner() {
-      if (qr) qr.stop();
-    }
-  </script>
+      <div class="grid grid-cols-3 gap-2 mt-4">
+        <button onclick="saveProduct()" class="bg-green-600 text-white py-2 rounded-lg shadow hover:bg-green-700">
+          Salva
+        </button>
+        <button onclick="loadProduct()" class="bg-blue-600 text-white py-2 rounded-lg shadow hover:bg-blue-700">
+          Cerca
+        </button>
+        <button onclick="updateProduct()" class="bg-yellow-500 text-white py-2 rounded-lg shadow hover:bg-yellow-600">
+          Modifica
+        </button>
+      </div>
+    </section>
+
+  </div> <!-- end wrapper -->
+
+  https://unpkg.com/html5-qrcode</script>
+  app.js</script>
+
 </body>
 </html>
