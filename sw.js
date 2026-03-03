@@ -1,7 +1,9 @@
 // sw.js — Dispensa PWA
 // Caching statici + runtime, prompt aggiornamento (skipWaiting), versioning.
 
+
 const VERSION = "1.3.9";
+
 const CACHE_NAME = `dispensa-${VERSION}`;
 const ASSETS = [
   "index.html",
